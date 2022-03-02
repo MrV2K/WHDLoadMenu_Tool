@@ -34,10 +34,11 @@
 ; Sped up filter and improved it's logic.
 ; Added Title Case to the help window.
 ; Changed 'Output Case' to 'Title Case' and renamed 'Ignore' to 'Camel Case' in the combobox.
-; Sped up edit window drawing
-; Added basic data to unknown slaves
-; Added database error check to fix list procedure;
-
+; Sped up edit window drawing.
+; Added basic data to unknown slaves.
+; Added database error check to fix list procedure.
+; Draw list, FTP download and filter code now in line with IGTool.
+;
 ; ====================================================================
 ;
 ;- ### Enumerations ###
@@ -101,7 +102,7 @@ Global NewList UM_Database.UM_Data()
 Global NewList Undo_Database.UM_Data()
 Global NewList Comp_Database.Comp_Data()
 Global NewList Filtered_List.i()
-Global NewMap Comp_Map.i()
+Global NewMap  Comp_Map.i()
 
 ;- ### Global Variables ###
 
@@ -252,7 +253,7 @@ Procedure Load_CSV()
   Protected CSV_File.i, Text_Data.s, Text_String.s
   Protected Count.i, I.i, Backslashes.i, Text_Line.s, Test_Line.s
   
-  CSV_Path=OpenFileRequester("Open Prefs","WHDLoadMenu.prefs","Prefs File (*.prefs)|*.prefs",0)
+  CSV_Path=OpenFileRequester("Open Prefs","","Prefs File (*.prefs)|*.prefs",0)
   
   Protected NewList CSV_List.s()
   
@@ -376,7 +377,11 @@ Procedure Filter_List()
     EndIf
   Next
   
-  DB_Filter(#True)
+  If filter Or Unknown
+    DB_Filter(#True)
+  Else
+    DB_Filter(#False)
+  EndIf
     
 EndProcedure
 
@@ -410,7 +415,6 @@ Procedure Get_Database()
       FTPSetDir(hConnect,FTP_Folder)
       FTPSetDir(hConnect,FTP_SubFolder)
       FTPSetDir(hConnect,FTP_SubFolder2)
-      
       FTPDir(hConnect,FTP_List())
       
       ForEach FTP_List()
@@ -422,20 +426,15 @@ Procedure Get_Database()
       If Old_DB <> New_DB
         
         SetGadgetText(#LOADING_TEXT,"Downloading data file.")
-        
         DeleteFile(Old_DB)
-        
         FTPDownload(hConnect,New_DB,New_DB)
         FTPDownload(hConnect,"genres","genres")
-        
         UM_Data_File=New_DB
         
       Else
         
         SetGadgetText(#LOADING_TEXT,"Data file up to date.")
-        
         Delay(500)
-        
         UM_Data_File=Old_DB
         
       EndIf
@@ -445,7 +444,6 @@ Procedure Get_Database()
     Else
       
       MessageRequester("Error", "Cannot connect to FTP.",#PB_MessageRequester_Error|#PB_MessageRequester_Ok)
-      
       UM_Data_File=Old_DB
       
     EndIf
@@ -453,13 +451,11 @@ Procedure Get_Database()
   Else
     
     MessageRequester("Error", "Cannot connect to Network.",#PB_MessageRequester_Error|#PB_MessageRequester_Ok)
-    
     UM_Data_File=Old_DB
     
   EndIf
   
-  If Old_DB<>"" : UM_Data_File=Old_DB : EndIf
-  
+  If New_DB="" : UM_Data_File=Old_DB : EndIf
   If UM_Data_File="" : MessageRequester("Error","No database file found",#PB_MessageRequester_Error|#PB_MessageRequester_Ok) : EndIf
   
   FreeList(FTP_List())
@@ -516,44 +512,43 @@ Procedure Draw_List()
   
   Protected Text.s, File.s
   Protected Count
+  Protected previous_entry.s
   
   Pause_Window(#MAIN_WINDOW)
   
   ClearGadgetItems(#MAIN_LIST)
-  
-  ClearList(Filtered_List())
-  
-  If filter Or unknown
-    Filter_List()
-  Else
-    DB_Filter(#False)
-  EndIf
 
-  ForEach Filtered_List()
-    SelectElement(UM_Database(),Filtered_List())
-    If UM_Database()\UM_Slave<>"" : File=UM_Database()\UM_Slave : EndIf
-    If UM_Database()\UM_Icon<>"" : File=UM_Database()\UM_Icon : EndIf
-    If Short_Names
-      Text=UM_Database()\UM_Short+Chr(10)+File+Chr(10)+UM_Database()\UM_Path+Chr(10)+UM_Database()\UM_Genre
-    Else
-      Text=UM_Database()\UM_Name+Chr(10)+File+Chr(10)+UM_Database()\UM_Path+Chr(10)+UM_Database()\UM_Genre
-    EndIf
-    AddGadgetItem(#MAIN_LIST,-1,text)
-    If ListIndex(UM_Database())>1
-      If GetGadgetItemText(#MAIN_LIST, ListIndex(Filtered_List())-1,0)=UM_Database()\UM_Name
-        SetGadgetItemColor(#MAIN_LIST, ListIndex(Filtered_List()), #PB_Gadget_FrontColor,#Red)
-        SetGadgetItemColor(#MAIN_LIST, ListIndex(Filtered_List())-1, #PB_Gadget_FrontColor,#Red)
+  Filter_List()
+  
+  If ListSize(Filtered_List())>0
+    
+    ForEach Filtered_List()
+      SelectElement(UM_Database(),Filtered_List())
+      If UM_Database()\UM_Slave<>"" : File=UM_Database()\UM_Slave : EndIf
+      If UM_Database()\UM_Icon<>"" : File=UM_Database()\UM_Icon : EndIf
+      If Short_Names
+        Text=UM_Database()\UM_Short+Chr(10)+File+Chr(10)+UM_Database()\UM_Path+Chr(10)+UM_Database()\UM_Genre
+      Else
+        Text=UM_Database()\UM_Name+Chr(10)+File+Chr(10)+UM_Database()\UM_Path+Chr(10)+UM_Database()\UM_Genre
       EndIf
-    EndIf 
-    If UM_Database()\UM_Unknown=#True : SetGadgetItemColor(#MAIN_LIST, ListIndex(Filtered_List()), #PB_Gadget_FrontColor,#Blue) : EndIf
-  Next
+      AddGadgetItem(#MAIN_LIST,-1,text)
+      If ListIndex(UM_Database())>1
+        If previous_entry=UM_Database()\UM_Name
+          SetGadgetItemColor(#MAIN_LIST, ListIndex(Filtered_List()), #PB_Gadget_FrontColor,#Red)
+          SetGadgetItemColor(#MAIN_LIST, ListIndex(Filtered_List())-1, #PB_Gadget_FrontColor,#Red)
+        EndIf
+      EndIf 
+      If UM_Database()\UM_Unknown=#True : SetGadgetItemColor(#MAIN_LIST, ListIndex(Filtered_List()), #PB_Gadget_FrontColor,#Blue) : EndIf
+      previous_entry=UM_Database()\UM_Name
+    Next
+    
+    For Count=0 To CountGadgetItems(#MAIN_LIST) Step 2
+      SetGadgetItemColor(#MAIN_LIST,Count,#PB_Gadget_BackColor,$eeeeee)
+    Next
+    
+  EndIf
   
-  For Count=0 To CountGadgetItems(#MAIN_LIST) Step 2
-    SetGadgetItemColor(#MAIN_LIST,Count,#PB_Gadget_BackColor,$eeeeee)
-  Next
-  
-  SetWindowTitle(#MAIN_WINDOW, "WHDLoadMenu Tool"+" "+Version+" (Showing "+Str(CountGadgetItems(#MAIN_LIST))+" of "+Str(ListSize(UM_Database()))+" Games)")
-  
+  SetWindowTitle(#MAIN_WINDOW, "WHDLoadMenu Tool"+" "+Version+" (Showing "+Str(CountGadgetItems(#MAIN_LIST))+" of "+Str(ListSize(UM_Database()))+" Games)") 
   SetGadgetState(#MAIN_LIST,0)
   SetActiveGadget(#MAIN_LIST)
   
@@ -594,7 +589,7 @@ Procedure Fix_List()
     EndIf
   Next
   
-  FreeMap(Comp_Map())
+  ClearMap(Comp_Map())
   ClearList(Comp_Database())
   
   SortStructuredList(UM_Database(),#PB_Sort_Ascending|#PB_Sort_NoCase,OffsetOf(UM_Data\UM_Name),TypeOf(UM_Data\UM_Name))
@@ -939,10 +934,10 @@ Repeat
 Until close=#True
 
 End
-; IDE Options = PureBasic 6.00 Beta 3 (Windows - x64)
-; CursorPosition = 582
-; FirstLine = 403
-; Folding = AB2A-
+; IDE Options = PureBasic 6.00 Beta 4 (Windows - x64)
+; CursorPosition = 104
+; FirstLine = 80
+; Folding = AAAA-
 ; Optimizer
 ; EnableThread
 ; EnableXP
