@@ -38,6 +38,7 @@
 ; Added basic data to unknown slaves.
 ; Added database error check to fix list procedure.
 ; Draw list, FTP download and filter code now in line with IGTool.
+; Main list columns now scale to scrollbar.
 ;
 ; ====================================================================
 ;
@@ -207,9 +208,9 @@ Procedure.l FTPDownload(hConnect.l,Source.s,Dest.s)
 EndProcedure 
 
 Procedure.l FTPClose(hInternet.l) 
-    ProcedureReturn InternetCloseHandle_(hInternet) 
+  ProcedureReturn InternetCloseHandle_(hInternet) 
 EndProcedure 
- 
+
 Procedure Save_CSV()
   
   Protected igfile, output$, path.s, response
@@ -249,7 +250,7 @@ Procedure Save_CSV()
 EndProcedure
 
 Procedure Load_CSV()
-
+  
   Protected CSV_File.i, Text_Data.s, Text_String.s
   Protected Count.i, I.i, Backslashes.i, Text_Line.s, Test_Line.s
   
@@ -344,7 +345,7 @@ Procedure Load_CSV()
   EndIf  
   
   SortStructuredList(UM_Database(),#PB_Sort_Ascending|#PB_Sort_NoCase,OffsetOf(UM_Data\UM_Name),TypeOf(UM_Data\UM_Name))
-
+  
   Backup_Database(#True)
   
   Proc_Exit:
@@ -354,7 +355,7 @@ Procedure Load_CSV()
 EndProcedure
 
 Procedure Filter_List()
-   
+  
   Protected Previous.s
   
   ClearList(Filtered_List())
@@ -382,7 +383,7 @@ Procedure Filter_List()
   Else
     DB_Filter(#False)
   EndIf
-    
+  
 EndProcedure
 
 Procedure Get_Database()
@@ -390,7 +391,7 @@ Procedure Get_Database()
   Protected hInternet.l, hConnect.l 
   Protected NewList FTP_List.s()
   Protected Old_DB.s, New_DB.s, Genres.s
-
+  
   ExamineDirectory(#DIR,Home_Path,"*.*")
   
   CreateRegularExpression(#REGEX,"UM_Data") 
@@ -483,7 +484,7 @@ Procedure Load_DB()
         DB_List()=ReadString(CSV_File)
       Until Eof(CSV_File)
       CloseFile(CSV_File)  
-
+      
       ForEach DB_List()
         AddElement(Comp_Database())
         Text_Line=DB_List()
@@ -514,10 +515,10 @@ Procedure Draw_List()
   Protected Count
   Protected previous_entry.s
   
-  Pause_Window(#MAIN_WINDOW)
+  Pause_Gadget(#MAIN_LIST)
   
   ClearGadgetItems(#MAIN_LIST)
-
+  
   Filter_List()
   
   If ListSize(Filtered_List())>0
@@ -557,8 +558,14 @@ Procedure Draw_List()
   Else
     DisableGadget(#TAG_BUTTON,#True)
   EndIf
-    
-  Resume_Window(#MAIN_WINDOW)
+  
+  Resume_Gadget(#MAIN_LIST)
+  
+  If GetWindowLongPtr_(GadgetID(#MAIN_LIST), #GWL_STYLE) & #WS_VSCROLL
+    SetGadgetItemAttribute(#MAIN_LIST,3,#PB_ListIcon_ColumnWidth,340)
+  Else
+    SetGadgetItemAttribute(#MAIN_LIST,3,#PB_ListIcon_ColumnWidth,355)
+  EndIf
   
 EndProcedure
 
@@ -636,7 +643,7 @@ Procedure Tag_List()
   
   FreeList(Tags())
   FreeList(Lines())
-    
+  
 EndProcedure
 
 Procedure Help_Window()
@@ -726,7 +733,7 @@ Procedure Edit_Window()
 EndProcedure
 
 Procedure Main_Window()
-
+  
   If OpenWindow(#MAIN_WINDOW,0,0,900,600,"WHDloadMenu Tool "+Version,#PB_Window_SystemMenu|#PB_Window_ScreenCentered)
     
     Pause_Window(#MAIN_WINDOW)
@@ -735,7 +742,7 @@ Procedure Main_Window()
     SetGadgetColor(#MAIN_LIST,#PB_Gadget_BackColor,#White)
     AddGadgetColumn(#MAIN_LIST,1,"Icon/Slave",200)
     AddGadgetColumn(#MAIN_LIST,2,"Path",340)
-
+    
     ButtonGadget(#LOAD_BUTTON,5,555,80,40,"Load Prefs")
     ButtonGadget(#FIX_BUTTON,90,555,80,40,"Fix List")
     ButtonGadget(#SAVE_BUTTON,175,555,80,40,"Save Prefs")
@@ -759,7 +766,7 @@ Procedure Main_Window()
     
     DisableGadget(#FIX_BUTTON,#True)
     DisableGadget(#SAVE_BUTTON,#True)
-
+    
     DisableGadget(#SHORT_NAME_CHECK,#True)
     DisableGadget(#CLEAR_BUTTON,#True)
     DisableGadget(#UNKNOWN_CHECK,#True)
@@ -769,6 +776,12 @@ Procedure Main_Window()
     DisableGadget(#CASE_COMBO,#True)
     
     Resume_Window(#MAIN_WINDOW)
+    
+    If GetWindowLongPtr_(GadgetID(#MAIN_LIST), #GWL_STYLE) & #WS_VSCROLL
+      SetGadgetItemAttribute(#MAIN_LIST,3,#PB_ListIcon_ColumnWidth,340)
+    Else
+      SetGadgetItemAttribute(#MAIN_LIST,3,#PB_ListIcon_ColumnWidth,355)
+    EndIf
     
   EndIf
   
@@ -811,8 +824,8 @@ Repeat
           close=#True
         EndIf  
       EndIf
-            
-      Case #PB_Event_Gadget
+      
+    Case #PB_Event_Gadget
       
       Select gadget
           
@@ -844,34 +857,34 @@ Repeat
           
         Case #TAG_BUTTON
           Tag_List()
-                    
+          
         Case #CLEAR_BUTTON
           If MessageRequester("Warning","Clear All Data?",#PB_MessageRequester_YesNo|#PB_MessageRequester_Warning)=#PB_MessageRequester_Yes
-          FreeList(Undo_Database())
-          FreeList(UM_Database())
-          FreeList(Filtered_List())
-          Pause_Window(#MAIN_WINDOW)
-          ClearGadgetItems(#MAIN_LIST)
-          DisableGadget(#FIX_BUTTON,#True)
-          DisableGadget(#SAVE_BUTTON,#True)
-          DisableGadget(#DUPE_CHECK,#True)
-          DisableGadget(#SHORT_NAME_CHECK,#True)
-          DisableGadget(#CLEAR_BUTTON,#True)
-          DisableGadget(#TAG_BUTTON,#True)
-          DisableGadget(#UNKNOWN_CHECK,#True)
-          DisableGadget(#UNDO_BUTTON,#True)
-          DisableGadget(#CASE_COMBO,#True)
-          Unknown=#False
-          Filter=#False
-          Short_Names=#False
-          SetGadgetState(#DUPE_CHECK,Filter)
-          SetGadgetState(#UNKNOWN_CHECK,Unknown)
-          SetGadgetState(#SHORT_NAME_CHECK,Short_Names)
-          SetWindowTitle(#MAIN_WINDOW,"WHDLoadMenu Tool "+Version)
-          Global NewList UM_Database.UM_Data()
-          Global NewList Undo_Database.UM_Data()
-          Global NewList Filtered_List.i()
-          Resume_Window(#MAIN_WINDOW)
+            FreeList(Undo_Database())
+            FreeList(UM_Database())
+            FreeList(Filtered_List())
+            Pause_Window(#MAIN_WINDOW)
+            ClearGadgetItems(#MAIN_LIST)
+            DisableGadget(#FIX_BUTTON,#True)
+            DisableGadget(#SAVE_BUTTON,#True)
+            DisableGadget(#DUPE_CHECK,#True)
+            DisableGadget(#SHORT_NAME_CHECK,#True)
+            DisableGadget(#CLEAR_BUTTON,#True)
+            DisableGadget(#TAG_BUTTON,#True)
+            DisableGadget(#UNKNOWN_CHECK,#True)
+            DisableGadget(#UNDO_BUTTON,#True)
+            DisableGadget(#CASE_COMBO,#True)
+            Unknown=#False
+            Filter=#False
+            Short_Names=#False
+            SetGadgetState(#DUPE_CHECK,Filter)
+            SetGadgetState(#UNKNOWN_CHECK,Unknown)
+            SetGadgetState(#SHORT_NAME_CHECK,Short_Names)
+            SetWindowTitle(#MAIN_WINDOW,"WHDLoadMenu Tool "+Version)
+            Global NewList UM_Database.UM_Data()
+            Global NewList Undo_Database.UM_Data()
+            Global NewList Filtered_List.i()
+            Resume_Window(#MAIN_WINDOW)
           EndIf
           
         Case #HELP_BUTTON
@@ -927,7 +940,7 @@ Repeat
           EndIf
           
       EndSelect
-             
+      
       
   EndSelect
   
@@ -935,8 +948,7 @@ Until close=#True
 
 End
 ; IDE Options = PureBasic 6.00 Beta 4 (Windows - x64)
-; CursorPosition = 104
-; FirstLine = 80
+; ExecutableFormat = Console
 ; Folding = AAAA-
 ; Optimizer
 ; EnableThread
@@ -944,7 +956,7 @@ End
 ; DPIAware
 ; UseIcon = boing.ico
 ; Executable = WHDLoadMenu_Tool_32.exe
-; Compiler = PureBasic 6.00 Beta 1 - C Backend (Windows - x64)
+; Compiler = PureBasic 6.00 Beta 4 (Windows - x64)
 ; Debugger = Standalone
 ; IncludeVersionInfo
 ; VersionField0 = 0,0,0,2
@@ -957,6 +969,11 @@ End
 ; VersionField7 = IG_Tool
 ; VersionField8 = IGame_Tool.exe
 ; VersionField9 = 2021 Paul Vince
+; VersionField10 = -
+; VersionField11 = -
+; VersionField12 = -
+; VersionField13 = -
+; VersionField14 = -
 ; VersionField15 = VOS_NT
 ; VersionField16 = VFT_APP
 ; VersionField17 = 0809 English (United Kingdom)
