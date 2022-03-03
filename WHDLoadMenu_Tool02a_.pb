@@ -948,7 +948,6 @@ Until close=#True
 
 End
 ; IDE Options = PureBasic 6.00 Beta 4 (Windows - x64)
-; ExecutableFormat = Console
 ; Folding = AAAA-
 ; Optimizer
 ; EnableThread
@@ -956,7 +955,7 @@ End
 ; DPIAware
 ; UseIcon = boing.ico
 ; Executable = WHDLoadMenu_Tool_32.exe
-; Compiler = PureBasic 6.00 Beta 4 (Windows - x64)
+; Compiler = PureBasic 6.00 Beta 4 - C Backend (Windows - x64)
 ; Debugger = Standalone
 ; IncludeVersionInfo
 ; VersionField0 = 0,0,0,2
